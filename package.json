@@ -1,0 +1,36 @@
+{
+  "name": "ficus",
+  "version": "1.0.0",
+  "description": "Easily download Figma and create SVGs components for Vue, React, Angular and more to come",
+  "main": "index.js",
+  "scripts": {
+    "build": "pnpm -r --filter=./packages/** run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omridevk/ficus.git"
+  },
+  "keywords": [
+    "figma",
+    "svgs",
+    "react",
+    "vue",
+    "angular",
+    "svg",
+    "download",
+    "components"
+  ],
+  "author": "omridevk",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/omridevk/ficus/issues"
+  },
+  "homepage": "https://github.com/omridevk/ficus#readme",
+  "workspaces": [
+    "docs",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "prettier": "^2.7.1"
+  }
+}
