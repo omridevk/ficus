@@ -1,5 +1,5 @@
-import { CliOptions } from "@ficus/types";
-import { FigmaOptions } from "@ficus/figma";
+import { CliOptions } from "@figus/types";
+import { FigmaOptions } from "@figus/figma";
 import { resolve } from "pathe";
 import fs from "fs-extra";
 import { pathToFileURL } from "url";

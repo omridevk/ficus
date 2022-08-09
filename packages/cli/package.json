@@ -1,7 +1,12 @@
 {
-  "name": "cli",
-  "version": "0.0.0",
+  "name": "@figus/cli",
+  "version": "0.0.1",
+  "description": "Easily download Figma and create SVGs components for Vue, React, Angular and more to come",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omridevk/ficus.git"
+  },
   "scripts": {
     "build": "rollup -c",
     "prepublishOnly": "pnpm build"
@@ -22,7 +27,7 @@
   "module": "./dist/cli.mjs",
   "types": "./dist/cli.d.ts",
   "bin": {
-    "ficus": "./ficus.mjs"
+    "figus": "./ficus.mjs"
   },
   "dependencies": {
     "cac": "^6.7.12",

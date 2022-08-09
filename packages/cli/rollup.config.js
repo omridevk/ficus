@@ -60,15 +60,15 @@ export default {
         alias({
             entries: [
                 {
-                    find: "@ficus/utils",
+                    find: "@figus/utils",
                     replacement: path.resolve(__dirname, "../utils/index.ts"),
                 },
                 {
-                    find: "@ficus/svg",
+                    find: "@figus/svg",
                     replacement: path.resolve(__dirname, "../svg/src/index.ts"),
                 },
                 {
-                    find: "@ficus/figma",
+                    find: "@figus/figma",
                     replacement: path.resolve(
                         __dirname,
                         "../figma/src/index.ts"

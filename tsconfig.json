@@ -16,19 +16,19 @@
     "declaration": true,
     "inlineSourceMap": true,
     "paths": {
-      "@ficus/cli": [
+      "@figus/cli": [
         "./packages/cli/src/index.ts"
       ],
-      "@ficus/svg": [
+      "@figus/svg": [
         "./packages/svg/src/index.ts"
       ],
-      "@ficus/types": [
+      "@figus/types": [
         "./packages/types/index.ts"
       ],
-      "@ficus/figma": [
+      "@figus/figma": [
         "./packages/figma/src/index.ts"
       ],
-      "@ficus/utils": [
+      "@figus/utils": [
         "./packages/utils/index.ts"
       ],
     }
