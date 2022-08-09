@@ -1,9 +1,6 @@
 {
-  "name": "figma",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "",
-  "main": "index.js",
-  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
