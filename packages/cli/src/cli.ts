@@ -1,146 +1,85 @@
-import fse from 'fs-extra';
-import yargs from 'yargs';
-import path from 'path';
+import fse from "fs-extra";
+import path, { ParsedPath } from "path";
 import rimraf from "rimraf";
-import Mustache from 'mustache';
-import Queue from './waterfall/Queue';
-import globAsync from 'fast-glob';
-import * as svgo from 'svgo';
-import * as prettier from 'prettier';
-import renameFilterDefault from './rename-filters';
-import {camelCase} from 'change-case'
+import Mustache from "mustache";
+import Queue from "./waterfall/Queue";
+import renameFilterDefault from "./rename-filters";
+import { getComponentName } from "./utils/getComponentName";
+import { formatFile, divider } from "@ficus/utils";
+import { cleanPaths, getSvgs } from "@ficus/svg";
+import cac from "cac";
+import c from "picocolors";
+import { version } from "../../../package.json";
+import { CliOptions, Frameworks } from "@ficus/types";
+import { download, FigmaOptions } from "@ficus/figma";
+import { spinner } from "../../utils";
+import fs from "fs";
 
+type RenameFilter = (
+    svgPathObj: ParsedPath,
+    innerPath: string,
+    options: CliOptions & { svgDir: string }
+) => string;
 
-import {getComponentName} from './utils/getComponentName';
-
-export const RENAME_FILTER_DEFAULT = './rename-filters/default';
-
-async function generateIndex(options) {
-    path.join(options.svgDir, options.glob);
-    const files = await globAsync(path.join(options.outputDir, '**/*.vue'));
-    const index = files.map((file) => {
-        const fileName = path.basename(file).replace('.vue', '');
-        const typename = camelCase(fileName);
-        return `
-        '${typename}': {
-          fileName: '${path.basename(fileName)}',
-        }
-      `;
-        // return `export { default as ${typename} } from './lib/${typename}.vue';\n`;
-    });
-    const indexFile = ['export const icons = {', index, '}'].join('');
-
-    await fse.writeFile(path.join(options.outputDir, 'index.ts'), indexFile);
-    await formatFile(path.join(options.outputDir, 'index.ts'));
+interface WorkerOptions {
+    svgPath: string;
+    svgDir: string;
+    framework: Frameworks;
+    disableLog: boolean;
+    output: string;
+    renameFilter: RenameFilter;
+    template: string;
+    progress?: () => void;
 }
 
-export function cleanPaths({svgPath, data}) {
-    // Remove hardcoded color fill before optimizing so that empty groups are removed
-    const input = data
-        .replace(/<rect fill="none" width="24" height="24"\/>/g, '')
-
-        .replace(/<rect id="SVGID_1_" width="24" height="24"\/>/g, '');
-
-    const result = svgo.optimize(input, {
-        floatPrecision: 4,
-        multipass: true,
-        plugins: [
-            {name: 'cleanupAttrs'},
-            {name: 'removeDoctype'},
-            {name: 'removeXMLProcInst'},
-            {name: 'removeComments'},
-            {name: 'removeMetadata'},
-            {name: 'removeTitle'},
-            {name: 'removeDesc'},
-            {name: 'removeUselessDefs'},
-            {name: 'removeXMLNS'},
-            {name: 'removeEditorsNSData'},
-            {name: 'removeEmptyAttrs'},
-            {name: 'removeHiddenElems'},
-            {name: 'removeEmptyText'},
-            {name: 'removeViewBox'},
-            {name: 'cleanupEnableBackground'},
-            {name: 'minifyStyles'},
-            {name: 'convertStyleToAttrs'},
-            {name: 'convertColors'},
-            {name: 'convertPathData'},
-            {name: 'convertTransform'},
-            {name: 'removeUnknownsAndDefaults'},
-            {name: 'removeNonInheritableGroupAttrs'},
-            {
-                name: 'removeUselessStrokeAndFill',
-                params: {
-                    // https://github.com/svg/svgo/issues/727#issuecomment-303115276
-                    // removeNone: true,
-                },
-            },
-            {name: 'removeUnusedNS'},
-            {name: 'cleanupIDs'},
-            {name: 'cleanupNumericValues'},
-            {name: 'cleanupListOfValues'},
-            {name: 'moveElemsAttrsToGroup'},
-            {name: 'moveGroupAttrsToElems'},
-            {name: 'collapseGroups'},
-            {name: 'removeRasterImages'},
-            {name: 'mergePaths'},
-            {name: 'convertShapeToPath'},
-            {name: 'sortAttrs'},
-            {name: 'removeDimensions'},
-            {
-                name: 'removeAttrs',
-                params: {
-                    attrs: 'stroke-linecap',
-                },
-            },
-            {name: 'removeElementsByAttr'},
-            {name: 'removeStyleElement'},
-            {name: 'removeScriptElement'},
-            {name: 'removeEmptyContainers'},
-        ],
+async function worker({
+    progress,
+    svgPath,
+    svgDir,
+    output,
+    renameFilter,
+    framework,
+    disableLog,
+    template,
+}: WorkerOptions) {
+    spinner.text = "Generating icons";
+    await writeSvg({
+        svgPath,
+        svgDir,
+        output,
+        renameFilter,
+        template,
+        framework,
+        disableLog,
     });
-    const jsxResult = svgo.optimize(result.data);
-    // Extract the paths from the svg string
-    // Clean xml paths
-    let paths = jsxResult.data
-        .replace(/"\/>/g, '" />')
-        .replace(/ clip-path=".+?"/g, '') // Fix visibility issue and save some bytes.
-        .replace(/<clipPath.+?<\/clipPath>/g, ''); // Remove unused definitions
-
-    const size = Number(path.basename(path.dirname(svgPath)));
-    if (size && size !== 24) {
-        const scale = Math.round((24 / size) * 100) / 100; // Keep a maximum of 2 decimals
-        paths = paths.replace('clipPath="url(#b)" ', '');
-        paths = paths.replace(
-            /<path /g,
-            `<path transform="scale(${scale}, ${scale})" fill="none" `
-        );
-    }
-    // replace stroke and fill with inherit color
-    paths = paths.replace(/fill=".+?"/g, 'fill="currentColor"');
-    paths = paths.replace(/stroke=".+?"/g, ' stroke="currentColor"');
-    if (!/fill=".+?"/.test(paths)) {
-        paths = paths.replace(/<path /g, '<path fill="none" ');
-    }
-
-    return paths;
 }
 
-
-async function worker({progress, svgPath, options, renameFilter, template}) {
-    progress();
-
+export async function writeSvg({
+    svgPath,
+    svgDir,
+    output,
+    renameFilter,
+    framework,
+    disableLog,
+    template,
+}: WorkerOptions) {
     const normalizedSvgPath = path.normalize(svgPath);
     const svgPathObj = path.parse(normalizedSvgPath);
     const innerPath = path
         .dirname(normalizedSvgPath)
-        .replace(options.svgDir, '')
-        .replace(path.relative(process.cwd(), options.svgDir), ''); // for relative dirs
-    const destPath = renameFilter(svgPathObj, innerPath, options);
-    const outputFileDir = path.dirname(path.join(options.outputDir, destPath));
+        .replace(svgDir, "")
+        .replace(path.relative(process.cwd(), svgDir), ""); // for relative dirs
+    const destPath = renameFilter(svgPathObj, innerPath, {
+        svgDir,
+        output,
+        framework,
+        disableLog,
+    });
+    const outputFileDir = path.dirname(path.join(output, destPath));
     await fse.ensureDir(outputFileDir);
     try {
-        const data = await fse.readFile(svgPath, {encoding: 'utf8'});
-        const paths = cleanPaths({svgPath, data});
+        const data = await fse.readFile(svgPath, { encoding: "utf8" });
+        const paths = cleanPaths({ svgPath, data });
         const componentName = getComponentName(destPath);
 
         const fileString = Mustache.render(template, {
@@ -148,7 +87,7 @@ async function worker({progress, svgPath, options, renameFilter, template}) {
             componentName,
         });
 
-        const absDestPath = path.join(options.outputDir, destPath);
+        const absDestPath = path.join(output, destPath);
         await fse.writeFile(absDestPath, fileString);
         await formatFile(absDestPath);
     } catch (e) {
@@ -156,65 +95,138 @@ async function worker({progress, svgPath, options, renameFilter, template}) {
     }
 }
 
-async function formatFile(file) {
-    let options = {
-        filepath: file,
-    };
-    const data = await fse.readFile(file, 'utf-8');
-
-    const resolvedOptions = await prettier.resolveConfig(file, {
-        editorconfig: true,
-    });
-    options = {
-        ...options,
-        ...resolvedOptions,
-    };
-    const formatted = prettier.format(data, options);
-    await fse.writeFile(file, formatted);
+function getTemplate({ framework }: { framework: Frameworks }) {
+    if (framework === "vue") {
+        return `../../vue/templateSvgIcon.js.mustache`;
+    }
+    return `../../react/templateSvgIcon.js.mustache`;
 }
 
+export async function handler({
+    output,
+    disableLog,
+    framework,
+    svgDir,
+    renameFilter,
+}: CliOptions & { renameFilter: RenameFilter; svgDir: string }) {
+    rimraf.sync(`${output}/*.vue`); // Clean old files
 
-;(async () => {
-    await handler({});
-})();
-
-export async function handler(options) {
-    const progress = options.disableLog
-        ? // eslint-disable-next-line @typescript-eslint/no-empty-function
-        () => {
-        }
-        : () => process.stdout.write('.');
-
-    rimraf.sync(`${options.outputDir}/*.vue`); // Clean old files
-
-    let renameFilter = options.renameFilter || renameFilterDefault;
-    if (typeof renameFilter !== 'function') {
-        throw Error('renameFilter must be a function');
+    if (typeof renameFilter !== "function") {
+        throw Error("renameFilter must be a function");
     }
-    await fse.ensureDir(options.outputDir);
-
-    const [svgPaths, template] = await Promise.all([
-        globAsync(path.join(options.svgDir, options.glob)),
-        fse.readFile(path.join(__dirname, 'templateSvgIcon.js.mustache'), {
-            encoding: 'utf8',
-        }),
-    ]);
-    console.info('Generating icons');
+    await fse.ensureDir(output);
+    const templatePath = getTemplate({ framework });
+    const { svgPaths, template } = await getSvgs({ templatePath, svgDir });
 
     const queue = new Queue(
-        (svgPath) =>
+        (svgPath: string) =>
             worker({
-                progress,
                 svgPath,
-                options,
+                svgDir,
+                framework,
+                disableLog,
+                output,
                 renameFilter,
                 template,
             }),
-        {concurrency: 8}
+        { concurrency: 8 }
     );
 
     queue.push(svgPaths);
-    await queue.wait({empty: true});
-    await generateIndex(options);
-    console.info('\nDone generating icons');
+    await queue.wait({ empty: true });
+    spinner.succeed("Done!!");
+}
+
+const cli = cac("ficus");
+
+cli.version(version)
+    .option("-s, --svgDir <path>", "Output of downloaded files")
+    .option("-fk, --fileKey <string>", "figma file key")
+    .option("-ik, --imageKey <string>", "figma image key")
+    .option("-p, --pageName <string>", "figma page")
+    .option("-t, --token <string>", "Figma token");
+
+cli.command("<string>")
+    .option("-o, --output <string>", "output path")
+    .action(start);
+
+cli.command("download")
+    .option("-o, --output <string>", "Download path")
+    .action(downloadFigma);
+
+cli.help();
+
+cli.parse();
+
+async function downloadFigma({
+    pageName,
+    imageKey,
+    fileKey,
+    output,
+    token,
+}: FigmaOptions) {
+    if (!token) {
+        console.log(`Please provide a ${c.red("Figma")} token`);
+        return;
+    }
+    const svgDir = await download({
+        token,
+        path: output,
+        figma: {
+            pageName,
+            imageKey,
+            fileKey,
+        },
+    });
+}
+
+async function start(
+    framework: Frameworks,
+    {
+        output,
+        disableLog,
+        token,
+        imageKey,
+        fileKey,
+        pageName,
+    }: CliOptions & FigmaOptions
+) {
+    if (!token) {
+        console.error("Please provide a figma token");
+        return;
+    }
+    try {
+        const svgDir = await download({
+            token,
+            figma: {
+                pageName,
+                imageKey,
+                fileKey,
+            },
+        });
+        if (!svgDir) {
+            console.error("Unable to download icons from figma");
+            process.exit();
+        }
+        // download from figma
+        const renameFilter = renameFilterDefault;
+        // determine which framework (vue, react, angular)
+        // use assets to create components
+        await handler({
+            svgDir,
+            output,
+            disableLog,
+            renameFilter,
+            framework,
+        });
+        fs.rmSync(svgDir, { recursive: true, force: true });
+        process.exit();
+    } catch (e) {
+        process.exitCode = 1;
+        console.error(
+            `\n${c.red(divider(c.bold(c.inverse(" Unhandled Error "))))}`
+        );
+        console.error(e);
+        console.error("\n\n");
+    }
 }

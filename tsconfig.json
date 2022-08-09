@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "lib": [
+      "esnext",
+      "dom"
+    ],
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "resolveJsonModule": true,
+    "skipDefaultLibCheck": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "inlineSourceMap": true,
+    "paths": {
+      "@ficus/cli": [
+        "./packages/cli/src/index.ts"
+      ],
+      "@ficus/svg": [
+        "./packages/svg/src/index.ts"
+      ],
+      "@ficus/types": [
+        "./packages/types/index.ts"
+      ],
+      "@ficus/figma": [
+        "./packages/figma/src/index.ts"
+      ],
+      "@ficus/utils": [
+        "./packages/utils/index.ts"
+      ],
+    }
+  }
+}
