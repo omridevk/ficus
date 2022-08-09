@@ -1,5 +1,6 @@
 {
   "name": "@figus/ficus",
+  "private": false,
   "version": "0.0.1",
   "description": "Easily download Figma and create SVGs components for Vue, React, Angular and more to come",
   "main": "index.js",
