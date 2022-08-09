@@ -75,7 +75,6 @@ export async function download({
         return file.dirname;
     } catch (e) {
         spinner.stop();
-        console.error(e);
         if (!file.dirname) {
             return;
         }

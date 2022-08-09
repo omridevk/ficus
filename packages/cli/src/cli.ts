@@ -14,6 +14,7 @@ import { CliOptions, Frameworks } from "@ficus/types";
 import { download, FigmaOptions } from "@ficus/figma";
 import { spinner } from "../../utils";
 import fs from "fs";
+import { resolveUserConfig } from "./config";
 
 type RenameFilter = (
     svgPathObj: ParsedPath,
@@ -25,7 +26,6 @@ interface WorkerOptions {
     svgPath: string;
     svgDir: string;
     framework: Frameworks;
-    disableLog: boolean;
     output: string;
     renameFilter: RenameFilter;
     template: string;
@@ -39,7 +39,6 @@ async function worker({
     output,
     renameFilter,
     framework,
-    disableLog,
     template,
 }: WorkerOptions) {
     spinner.text = "Generating icons";
@@ -50,7 +49,6 @@ async function worker({
         renameFilter,
         template,
         framework,
-        disableLog,
     });
 }
 
@@ -60,7 +58,6 @@ export async function writeSvg({
     output,
     renameFilter,
     framework,
-    disableLog,
     template,
 }: WorkerOptions) {
     const normalizedSvgPath = path.normalize(svgPath);
@@ -73,7 +70,6 @@ export async function writeSvg({
         svgDir,
         output,
         framework,
-        disableLog,
     });
     const outputFileDir = path.dirname(path.join(output, destPath));
     await fse.ensureDir(outputFileDir);
@@ -124,7 +120,6 @@ export async function handler({
                 svgPath,
                 svgDir,
                 framework,
-                disableLog,
                 output,
                 renameFilter,
                 template,
@@ -136,27 +131,6 @@ export async function handler({
     await queue.wait({ empty: true });
     spinner.succeed("Done!!");
 }
-
-const cli = cac("ficus");
-
-cli.version(version)
-    .option("-s, --svgDir <path>", "Output of downloaded files")
-    .option("-fk, --fileKey <string>", "figma file key")
-    .option("-ik, --imageKey <string>", "figma image key")
-    .option("-p, --pageName <string>", "figma page")
-    .option("-t, --token <string>", "Figma token");
-
-cli.command("<string>")
-    .option("-o, --output <string>", "output path")
-    .action(start);
-
-cli.command("download")
-    .option("-o, --output <string>", "Download path")
-    .action(downloadFigma);
-
-cli.help();
-
-cli.parse();
 
 async function downloadFigma({
     pageName,
@@ -191,11 +165,12 @@ async function start(
         pageName,
     }: CliOptions & FigmaOptions
 ) {
-    if (!token) {
-        console.error("Please provide a figma token");
-        return;
-    }
     try {
+        const config = await resolveUserConfig();
+
+        if (!token) {
+            return;
+        }
         const svgDir = await download({
             token,
             figma: {
@@ -230,3 +205,30 @@ async function start(
         console.error("\n\n");
     }
 }
+
+const cli = cac("ficus");
+
+cli.version(version)
+    .option("-s, --svg-dir <svgDir>", "Output of downloaded files")
+    .option("-fk, --file-key <fileKey>", "figma file key")
+    .option("-ik, --image-key <imageKey>", "figma image key")
+    .option("-p, --page-name <pageName>", "figma page")
+    .option("-t, --token <token>", "Figma token");
+
+cli.command(
+    "[framework]",
+    "Generate components from figma for a specific framework"
+)
+    .option("-o, --output <string>", "output path")
+    .action(start);
+
+cli.command(
+    "download",
+    "Download Figma page components as SVGs to a specified location"
+)
+    .option("-o, --output <string>", "Download path")
+    .action(downloadFigma);
+
+cli.help();
+
+cli.parse();

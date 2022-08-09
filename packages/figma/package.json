@@ -10,7 +10,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
+  "devDependencies": {
+    "figma-api": "^1.10.1",
+    "nodejs-file-downloader": "^4.10.1",
     "download": "^8.0.0"
   }
 }

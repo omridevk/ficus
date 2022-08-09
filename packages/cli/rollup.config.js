@@ -9,6 +9,8 @@ import alias from "@rollup/plugin-alias";
 
 import { relative } from "pathe";
 
+const entries = ["src/cli.ts", "src/config.ts"];
+
 const external = [
     ...builtinModules,
     ...Object.keys(pkg.dependencies),
@@ -17,7 +19,7 @@ const external = [
 ];
 
 export default {
-    input: "src/cli.ts",
+    input: entries,
     output: {
         dir: "dist",
         format: "esm",

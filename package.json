@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "description": "Easily download Figma and create SVGs components for Vue, React, Angular and more to come",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "build": "pnpm -r --filter=./packages/** run build"
+    "build": "pnpm -r --filter=./packages/** run build",
+    "release": "bumpp package.json packages/*/package.json --commit --push --tag && pnpm -r publish --access public"
   },
   "repository": {
     "type": "git",
@@ -32,11 +34,10 @@
   ],
   "devDependencies": {
     "@types/download": "^8.0.1",
-    "prettier": "^2.7.1"
+    "prettier": "^2.7.1",
+    "bumpp": "^8.2.1"
   },
   "dependencies": {
-    "download": "^8.0.0",
-    "figma-api": "^1.10.1",
-    "nodejs-file-downloader": "^4.10.1"
+
   }
 }
