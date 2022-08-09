@@ -3,7 +3,7 @@ import Downloader from "nodejs-file-downloader";
 import { VFile } from "vfile";
 import * as fs from "fs";
 import * as https from "https";
-import { spinner } from "@ficus/utils";
+import { spinner } from "@figus/utils";
 import rimraf from "rimraf";
 
 export interface FigmaOptions {

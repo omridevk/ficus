@@ -2,7 +2,7 @@ import path from "path";
 import fse from "fs-extra";
 import globAsync from "fast-glob";
 import { camelCase } from "change-case";
-import { formatFile } from "@ficus/utils";
+import { formatFile } from "@figus/utils";
 
 async function generateIndex(options) {
     path.join(options.svgDir, options.glob);

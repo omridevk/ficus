@@ -1,4 +1,4 @@
-import { FigmaOptions } from "@ficus/figma";
+import { FigmaOptions } from "@figus/figma";
 
 export interface CliOptions {
     output: string;
