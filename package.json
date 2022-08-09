@@ -1,5 +1,5 @@
 {
-  "name": "ficus",
+  "name": "@figus/ficus",
   "private": false,
   "version": "0.0.1",
   "description": "Easily download Figma and create SVGs components for Vue, React, Angular and more to come",
@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r --filter=./packages/** run build",
-    "release": "bumpp package.json packages/*/package.json --commit --push --tag && pnpm -r publish"
+    "release": "bumpp package.json packages/*/package.json --commit --push --tag && pnpm -r publish --access=public"
   },
   "repository": {
     "type": "git",
