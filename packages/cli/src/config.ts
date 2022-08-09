@@ -8,7 +8,7 @@ export function defineConfig(config: CliOptions) {
     return config;
 }
 
-type Config = CliOptions & FigmaOptions;
+type Config = CliOptions & { figma: FigmaOptions };
 
 const supportedConfigExtensions = ["js", "ts", "mjs", "mts"];
 

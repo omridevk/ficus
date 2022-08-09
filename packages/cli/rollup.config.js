@@ -8,8 +8,8 @@ import json from "@rollup/plugin-json";
 import alias from "@rollup/plugin-alias";
 import dts from "rollup-plugin-dts";
 
-const entries = ["src/cli.ts", "src/config.ts"];
-const dtsEntries = ["src/cli.ts", "src/config.ts"];
+const entries = ["src/index.ts"];
+const dtsEntries = ["src/index.ts"];
 
 const external = [
     ...builtinModules,

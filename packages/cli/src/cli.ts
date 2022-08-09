@@ -99,7 +99,6 @@ function getTemplate({ framework }: { framework: Frameworks }) {
 
 export async function handler({
     output,
-    disableLog,
     framework,
     svgDir,
     renameFilter,
@@ -155,18 +154,22 @@ async function downloadFigma({
 
 async function start(
     framework: Frameworks,
-    {
-        output,
-        disableLog,
-        token,
-        imageKey,
-        fileKey,
-        pageName,
-    }: CliOptions & FigmaOptions
+    options: CliOptions & FigmaOptions
 ) {
     try {
         const config = await resolveUserConfig();
-
+        const {
+            output,
+            figma: { token, imageKey, fileKey, pageName },
+        } = {
+            output: options.output || config.output,
+            figma: {
+                token: options.token || config.figma.token,
+                imageKey: options.imageKey || config.figma.imageKey,
+                fileKey: options.fileKey || config.figma.fileKey,
+                pageName: options.pageName || config.figma.pageName,
+            },
+        };
         if (!token) {
             return;
         }
@@ -189,9 +192,8 @@ async function start(
         await handler({
             svgDir,
             output,
-            disableLog,
             renameFilter,
-            framework,
+            framework: framework || config.framework,
         });
         fs.rmSync(svgDir, { recursive: true, force: true });
         process.exit();

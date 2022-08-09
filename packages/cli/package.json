@@ -1,6 +1,6 @@
 {
   "name": "@figus/cli",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Easily download Figma and create SVGs components for Vue, React, Angular and more to come",
   "type": "module",
   "repository": {
@@ -18,16 +18,14 @@
     "*.mjs",
     "*.cjs"
   ],
-  "module": "./dist/cli.mjs",
-  "types": "./dist/cli.d.ts",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "exports": {
+    "./*": "./*",
     ".": {
-      "require": "./dist/cli.js",
-      "import": "./dist/cli.mjs",
-      "types": "./dist/cli.d.ts"
-    },
-    "./config": {
-      "types": "./config.d.ts"
+      "require": "./dist/index.mjs",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
     }
   },
   "bin": {
