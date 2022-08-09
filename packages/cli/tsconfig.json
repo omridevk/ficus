@@ -1,4 +1,5 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
@@ -15,22 +16,5 @@
     "skipLibCheck": true,
     "declaration": true,
     "inlineSourceMap": true,
-    "paths": {
-      "@figus/cli": [
-        "./packages/cli/src/index.ts"
-      ],
-      "@figus/svg": [
-        "./packages/svg/src/index.ts"
-      ],
-      "@figus/types": [
-        "./packages/types/src/index.ts"
-      ],
-      "@figus/figma": [
-        "./packages/figma/src/index.ts"
-      ],
-      "@figus/utils": [
-        "./packages/utils/src/index.ts"
-      ],
-    }
   }
 }

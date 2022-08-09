@@ -6,10 +6,10 @@ import commonjs from "@rollup/plugin-commonjs";
 import esbuild from "rollup-plugin-esbuild";
 import json from "@rollup/plugin-json";
 import alias from "@rollup/plugin-alias";
-
-import { relative } from "pathe";
+import dts from "rollup-plugin-dts";
 
 const entries = ["src/cli.ts", "src/config.ts"];
+const dtsEntries = ["src/cli.ts", "src/config.ts"];
 
 const external = [
     ...builtinModules,
@@ -18,71 +18,57 @@ const external = [
     "inspector",
 ];
 
-export default {
-    input: entries,
-    output: {
-        dir: "dist",
-        format: "esm",
-        sourcemap: true,
-        entryFileNames: "[name].mjs",
-        chunkFileNames: (chunkInfo) => {
-            const id =
-                chunkInfo.facadeModuleId ||
-                Object.keys(chunkInfo.modules).find(
-                    (i) => !i.includes("node_modules") && i.includes("src/")
-                );
-            if (id) {
-                const parts = Array.from(
-                    new Set(
-                        relative(process.cwd(), id)
-                            .split(/\//g)
-                            .map((i) => i.replace(/\..*$/, ""))
-                            .filter(
-                                (i) =>
-                                    ![
-                                        "src",
-                                        "index",
-                                        "dist",
-                                        "node_modules",
-                                    ].some((j) => i.includes(j)) &&
-                                    i.match(/^[\w_-]+$/)
-                            )
-                    )
-                );
-                if (parts.length)
-                    return `chunk-${parts.slice(-2).join("-")}.[hash].mjs`;
-            }
-            return "vendor-[name].[hash].mjs";
+const aliasPlugin = alias({
+    entries: [
+        {
+            find: "@figus/utils",
+            replacement: path.resolve(__dirname, "../utils/src/index.ts"),
         },
-    },
-    external,
-    plugins: [
-        alias({
-            entries: [
-                {
-                    find: "@figus/utils",
-                    replacement: path.resolve(__dirname, "../utils/index.ts"),
-                },
-                {
-                    find: "@figus/svg",
-                    replacement: path.resolve(__dirname, "../svg/src/index.ts"),
-                },
-                {
-                    find: "@figus/figma",
-                    replacement: path.resolve(
-                        __dirname,
-                        "../figma/src/index.ts"
-                    ),
-                },
-            ],
-        }),
-        nodeResolve({
-            preferBuiltins: true,
-        }),
-        json(),
-        commonjs(),
-        esbuild({
-            target: "node14",
-        }),
+        {
+            find: "@figus/svg",
+            replacement: path.resolve(__dirname, "../svg/src/index.ts"),
+        },
+        {
+            find: "@figus/figma",
+            replacement: path.resolve(__dirname, "../figma/src/index.ts"),
+        },
+        {
+            find: "@figus/types",
+            replacement: path.resolve(__dirname, "../types/src/index.ts"),
+        },
     ],
-};
+});
+
+export default [
+    {
+        input: entries,
+        output: {
+            dir: "dist",
+            format: "esm",
+            sourcemap: true,
+            entryFileNames: "[name].mjs",
+        },
+        external,
+        plugins: [
+            nodeResolve({
+                preferBuiltins: true,
+            }),
+            aliasPlugin,
+            json(),
+            commonjs(),
+            esbuild({
+                target: "node14",
+            }),
+        ],
+    },
+    {
+        input: dtsEntries,
+        output: {
+            dir: "dist",
+            entryFileNames: (chunk) => `${chunk.name.replace("src/", "")}.d.ts`,
+            format: "esm",
+        },
+        external,
+        plugins: [aliasPlugin, dts({ respectExternal: true })],
+    },
+];
