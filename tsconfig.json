@@ -28,6 +28,9 @@
       "@figus/figma": [
         "./packages/figma/src/index.ts"
       ],
+      "@figus/vue": [
+        "./packages/vue/src/index.ts"
+      ],
       "@figus/utils": [
         "./packages/utils/src/index.ts"
       ],

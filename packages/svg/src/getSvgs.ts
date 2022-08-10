@@ -6,21 +6,6 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export async function getSvgs({
-    templatePath,
-    svgDir,
-}: {
-    templatePath: string;
-    svgDir: string;
-}) {
-    const [svgPaths, template] = await Promise.all([
-        globAsync(path.join(svgDir, "**/*.svg")),
-        fse.readFile(path.join(__dirname, templatePath), {
-            encoding: "utf8",
-        }),
-    ]);
-    return {
-        svgPaths,
-        template,
-    };
+export async function getSvgs({ svgDir }: { svgDir: string }) {
+    return await globAsync(path.join(svgDir, "**/*.svg"));
 }

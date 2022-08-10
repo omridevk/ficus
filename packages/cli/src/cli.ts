@@ -11,7 +11,8 @@ import cac from "cac";
 import c from "picocolors";
 import { version } from "../../../package.json";
 import { CliOptions, Frameworks } from "@figus/types";
-import { download, FigmaOptions } from "@figus/figma";
+import { download, FigmaOptions, clean } from "@figus/figma";
+import { template } from "@figus/vue";
 import fs from "fs";
 import { resolveUserConfig } from "./config";
 
@@ -32,7 +33,6 @@ interface WorkerOptions {
 }
 
 async function worker({
-    progress,
     svgPath,
     svgDir,
     output,
@@ -90,11 +90,10 @@ export async function writeSvg({
     }
 }
 
-function getTemplate({ framework }: { framework: Frameworks }) {
+async function getTemplate({ framework }: { framework: Frameworks }) {
     if (framework === "vue") {
-        return `../../vue/templateSvgIcon.js.mustache`;
+        return template();
     }
-    return `../../react/templateSvgIcon.js.mustache`;
 }
 
 export async function handler({
@@ -104,14 +103,18 @@ export async function handler({
     renameFilter,
 }: CliOptions & { renameFilter: RenameFilter; svgDir: string }) {
     rimraf.sync(`${output}/*.vue`); // Clean old files
-
     if (typeof renameFilter !== "function") {
         throw Error("renameFilter must be a function");
     }
+    if (!output) {
+        throw Error("Please provide an output");
+    }
     await fse.ensureDir(output);
-    const templatePath = getTemplate({ framework });
-    const { svgPaths, template } = await getSvgs({ templatePath, svgDir });
-
+    const template = await getTemplate({ framework });
+    const svgPaths = await getSvgs({ svgDir });
+    if (!template) {
+        return;
+    }
     const queue = new Queue(
         (svgPath: string) =>
             worker({
@@ -137,11 +140,12 @@ async function downloadFigma({
     output,
     token,
 }: FigmaOptions) {
+    await clean();
     if (!token) {
         console.log(`Please provide a ${c.red("Figma")} token`);
         return;
     }
-    const svgDir = await download({
+    await download({
         token,
         path: output,
         figma: {
@@ -152,35 +156,69 @@ async function downloadFigma({
     });
 }
 
+async function getConfig(options: CliOptions & FigmaOptions) {
+    const config = await resolveUserConfig();
+    return {
+        output: options.output || config.output,
+        path: options.path || config.path,
+        framework: config.framework,
+        figma: {
+            token: options.token || config.figma.token,
+            imageKey: options.imageKey || config.figma.imageKey,
+            fileKey: options.fileKey || config.figma.fileKey,
+            pageName: options.pageName || config.figma.pageName,
+        },
+    };
+}
+
+async function generate(options: CliOptions) {
+    const {
+        output,
+        path,
+        framework: configFramework,
+    } = await getConfig(options);
+    try {
+        const renameFilter = renameFilterDefault;
+        if (!path) {
+            return;
+        }
+        // determine which framework (vue, react, angular)
+        // use assets to create components
+        await handler({
+            svgDir: path,
+            output,
+            renameFilter,
+            framework: configFramework,
+        });
+        fs.rmSync(path, { recursive: true, force: true });
+        process.exit();
+    } catch (e) {
+        console.log(e);
+    }
+}
+
 async function start(
     framework: Frameworks,
     options: CliOptions & FigmaOptions
 ) {
+    clean();
+    const {
+        output,
+        path,
+        framework: configFramework,
+        figma: { token, imageKey, fileKey, pageName },
+    } = await getConfig(options);
     try {
-        const config = await resolveUserConfig();
-        const {
-            output,
-            figma: { token, imageKey, fileKey, pageName },
-        } = {
-            output: options.output || config.output,
-            figma: {
-                token: options.token || config.figma.token,
-                imageKey: options.imageKey || config.figma.imageKey,
-                fileKey: options.fileKey || config.figma.fileKey,
-                pageName: options.pageName || config.figma.pageName,
-            },
-        };
-        if (!token) {
-            return;
-        }
-        const svgDir = await download({
-            token,
-            figma: {
-                pageName,
-                imageKey,
-                fileKey,
-            },
-        });
+        const svgDir =
+            path ||
+            (await download({
+                token,
+                figma: {
+                    pageName,
+                    imageKey,
+                    fileKey,
+                },
+            }));
         if (!svgDir) {
             console.error("Unable to download icons from figma");
             process.exit();
@@ -193,7 +231,7 @@ async function start(
             svgDir,
             output,
             renameFilter,
-            framework: framework || config.framework,
+            framework: framework || configFramework,
         });
         fs.rmSync(svgDir, { recursive: true, force: true });
         process.exit();
@@ -222,6 +260,11 @@ cli.command(
 )
     .option("-o, --output <string>", "output path")
     .action(start);
+
+cli.command("generate", "generate components from svg files")
+    .option("-o, --output <output>", "Download path")
+    .option("-p, --path <path>", "Directory containing the svg files")
+    .action(generate);
 
 cli.command(
     "download",

@@ -1,2 +1,2 @@
 import ora from "ora";
-export const spinner = ora("Downloading");
+export const spinner = ora();

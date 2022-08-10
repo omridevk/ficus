@@ -29,6 +29,10 @@ const aliasPlugin = alias({
             replacement: path.resolve(__dirname, "../svg/src/index.ts"),
         },
         {
+            find: "@figus/vue",
+            replacement: path.resolve(__dirname, "../vue/src/index.ts"),
+        },
+        {
             find: "@figus/figma",
             replacement: path.resolve(__dirname, "../figma/src/index.ts"),
         },

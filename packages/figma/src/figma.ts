@@ -5,11 +5,15 @@ import * as fs from "fs";
 import { spinner } from "@figus/utils";
 
 export interface FigmaOptions {
-    fileKey: string;
-    imageKey: string;
+    fileKey?: string;
+    imageKey?: string;
     token?: string;
     output?: string;
-    pageName: string;
+    pageName?: string;
+}
+
+export async function clean() {
+    fs.rmSync("~/icons/temp", { recursive: true, force: true });
 }
 
 export async function download({
@@ -17,20 +21,23 @@ export async function download({
     figma,
     path,
 }: {
-    token: string;
+    token?: string;
     figma: FigmaOptions;
     path?: string;
 }) {
+    await clean();
+    if (!token || !figma.fileKey || !figma.imageKey || !figma.pageName) {
+        return;
+    }
     const api = new Figma.Api({
         personalAccessToken: token,
     });
-    fs.rmSync("~/icons/temp", { recursive: true, force: true });
 
     const file = new VFile({
         path: "~/icons/temp",
     });
     try {
-        spinner.start();
+        spinner.start("determining files to download");
         const components = await api.getFileComponents(figma.fileKey);
         const files = components.meta?.components
             .filter((item) => item.containing_frame?.pageName === "Icon")
