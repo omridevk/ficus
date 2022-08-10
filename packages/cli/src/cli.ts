@@ -1,36 +1,20 @@
 import fse from "fs-extra";
-import path, { ParsedPath } from "path";
 import rimraf from "rimraf";
-import Mustache from "mustache";
 import Queue from "./waterfall/Queue";
 import renameFilterDefault from "./rename-filters";
-import { getComponentName } from "./utils/getComponentName";
-import { formatFile, divider, spinner } from "@figus/utils";
-import { cleanPaths, getSvgs } from "@figus/svg";
+import { divider, spinner } from "@figus/utils";
+import { getSvgs, WorkerOptions, writeSvg } from "@figus/svg";
 import cac from "cac";
 import c from "picocolors";
 import { version } from "../../../package.json";
 import { CliOptions, Frameworks } from "@figus/types";
-import { download, FigmaOptions, clean } from "@figus/figma";
+import { clean, download, FigmaOptions } from "@figus/figma";
 import { template } from "@figus/vue";
 import fs from "fs";
 import { resolveUserConfig } from "./config";
-
-type RenameFilter = (
-    svgPathObj: ParsedPath,
-    innerPath: string,
-    options: CliOptions & { svgDir: string }
-) => string;
-
-interface WorkerOptions {
-    svgPath: string;
-    svgDir: string;
-    framework: Frameworks;
-    output: string;
-    renameFilter: RenameFilter;
-    template: string;
-    progress?: () => void;
-}
+import inquirer from "inquirer";
+import { RenameFilter } from "../../svg/src";
+import { createConfig } from "./utils/createConfig";
 
 async function worker({
     svgPath,
@@ -49,45 +33,6 @@ async function worker({
         template,
         framework,
     });
-}
-
-export async function writeSvg({
-    svgPath,
-    svgDir,
-    output,
-    renameFilter,
-    framework,
-    template,
-}: WorkerOptions) {
-    const normalizedSvgPath = path.normalize(svgPath);
-    const svgPathObj = path.parse(normalizedSvgPath);
-    const innerPath = path
-        .dirname(normalizedSvgPath)
-        .replace(svgDir, "")
-        .replace(path.relative(process.cwd(), svgDir), ""); // for relative dirs
-    const destPath = renameFilter(svgPathObj, innerPath, {
-        svgDir,
-        output,
-        framework,
-    });
-    const outputFileDir = path.dirname(path.join(output, destPath));
-    await fse.ensureDir(outputFileDir);
-    try {
-        const data = await fse.readFile(svgPath, { encoding: "utf8" });
-        const paths = cleanPaths({ svgPath, data });
-        const componentName = getComponentName(destPath);
-
-        const fileString = Mustache.render(template, {
-            paths,
-            componentName,
-        });
-
-        const absDestPath = path.join(output, destPath);
-        await fse.writeFile(absDestPath, fileString);
-        await formatFile(absDestPath);
-    } catch (e) {
-        return null;
-    }
 }
 
 async function getTemplate({ framework }: { framework: Frameworks }) {
@@ -245,13 +190,60 @@ async function start(
     }
 }
 
+async function init() {
+    inquirer
+        .prompt([
+            {
+                type: "list",
+                message: "Select framework",
+                name: "framework",
+                choices: ["React", "Vue"],
+            },
+            {
+                type: "input",
+                name: "fileKey",
+                message: "Figma file key",
+            },
+            {
+                type: "input",
+                name: "imageKey",
+                message: "Figma image key",
+            },
+            {
+                type: "input",
+                name: "pageName",
+                message: "Figma page name that contains the icons",
+            },
+            {
+                type: "input",
+                name: "output",
+                message: "Output path to save the components in",
+            },
+        ])
+        .then(async ({ output, pageName, imageKey, fileKey, framework }) => {
+            await createConfig({
+                output,
+                figma: { pageName, imageKey, fileKey },
+                framework,
+            });
+            // Use user feedback for... whatever!!
+        })
+        .catch((error) => {
+            if (error.isTtyError) {
+                // Prompt couldn't be rendered in the current environment
+            } else {
+                // Something else went wrong
+            }
+        });
+}
+
 const cli = cac("ficus");
 
 cli.version(version)
     .option("-s, --svg-dir <svgDir>", "Output of downloaded files")
     .option("-fk, --file-key <fileKey>", "figma file key")
     .option("-ik, --image-key <imageKey>", "figma image key")
-    .option("-p, --page-name <pageName>", "figma page")
+    .option("-p, --page-name <pageName>", "figma page name")
     .option("-t, --token <token>", "Figma token");
 
 cli.command(
@@ -272,6 +264,8 @@ cli.command(
 )
     .option("-o, --output <string>", "Download path")
     .action(downloadFigma);
+
+cli.command("init", "initialize figus config file").action(init);
 
 cli.help();
 
